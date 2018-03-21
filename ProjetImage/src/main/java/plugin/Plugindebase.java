@@ -2,21 +2,30 @@ package plugin;
 
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
+import org.scijava.convert.ConvertService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
+import ij.ImagePlus;
+import ij.process.ImageConverter;
+import net.imagej.Dataset;
 import net.imagej.ImgPlus;
 import net.imglib2.RandomAccess;
+import net.imglib2.img.ImagePlusAdapter;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 
 @Plugin(type = Command.class, menuPath = "Plugins>Projet > PlugindeBase (Not normalized)")
 public class Plugindebase<T extends RealType<T>>  implements Command{
-
+		@Parameter
+		ConvertService cs;
+		
 		@Parameter(persist = false)
 		ImgPlus<T> img;
-
+		@Parameter
+		Dataset colorImage;
+		
 		@Parameter(type = ItemIO.OUTPUT)
 		ImgPlus<UnsignedByteType> imageConv;
 
@@ -26,16 +35,23 @@ public class Plugindebase<T extends RealType<T>>  implements Command{
 			long[] dimensions = new long[img.numDimensions()];
 			img.dimensions(dimensions);
 			// Creation of the resulting image with the same size as the input image.
-			imageConv = ImgPlus.wrap(ArrayImgs.unsignedBytes(dimensions));
-			imageConv.setName(img.getName() + "_Mask");
 
+			ImagePlus colorImagePlus = cs.convert(colorImage, ImagePlus.class);
+			ImageConverter converter = new ImageConverter(colorImagePlus);
+			converter.convertToGray8();
+			imageConv = new ImgPlus<UnsignedByteType>(ImagePlusAdapter.wrapByte(colorImagePlus),
+					img.getName() + "_gray");
+			
 			// Two random cursor to visit all pixels in the input and output images.
 			RandomAccess<T> cursorIn = img.randomAccess();
 			RandomAccess<UnsignedByteType> cursorOut = imageConv.randomAccess();
-			appliquerSeuillage(127, cursorIn,cursorOut,dimensions);
+			appliquerSeuillage(220, cursorIn,cursorOut,dimensions);
 		}
-		private void appliquerSeuillage(int seuil, RandomAccess<T> cursorIn, RandomAccess<UnsignedByteType> cursorOut,
-				long[] dimensions) {
+		
+		
+		
+		
+		private void appliquerSeuillage(int seuil, RandomAccess<T> cursorIn, RandomAccess<UnsignedByteType> cursorOut,long[] dimensions) {
 			long[] position = new long[3];
 			for (int i = 0; i < dimensions[0] ;i++) {
 				position[0]=i;
