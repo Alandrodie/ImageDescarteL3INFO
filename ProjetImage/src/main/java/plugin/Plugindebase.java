@@ -36,11 +36,7 @@ public class Plugindebase<T extends RealType<T>>  implements Command{
 			img.dimensions(dimensions);
 			// Creation of the resulting image with the same size as the input image.
 
-			ImagePlus colorImagePlus = cs.convert(colorImage, ImagePlus.class);
-			ImageConverter converter = new ImageConverter(colorImagePlus);
-			converter.convertToGray8();
-			imageConv = new ImgPlus<UnsignedByteType>(ImagePlusAdapter.wrapByte(colorImagePlus),
-					img.getName() + "_gray");
+			imageConv = convertirNoiretBlanc(colorImage);
 			
 			// Two random cursor to visit all pixels in the input and output images.
 			RandomAccess<T> cursorIn = img.randomAccess();
@@ -50,7 +46,13 @@ public class Plugindebase<T extends RealType<T>>  implements Command{
 		
 		
 		
-		
+		private ImgPlus<UnsignedByteType>  convertirNoiretBlanc(Dataset dataset){
+			ImagePlus colorImagePlus = cs.convert(dataset, ImagePlus.class);
+			ImageConverter converter = new ImageConverter(colorImagePlus);
+			converter.convertToGray8();
+			return  new ImgPlus<UnsignedByteType>(ImagePlusAdapter.wrapByte(colorImagePlus),
+					dataset.getName() + "_gray");
+		}
 		private void appliquerSeuillage(int seuil, RandomAccess<T> cursorIn, RandomAccess<UnsignedByteType> cursorOut,long[] dimensions) {
 			long[] position = new long[3];
 			for (int i = 0; i < dimensions[0] ;i++) {
