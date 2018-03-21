@@ -24,10 +24,10 @@ public class Plugindebase implements Command{
 
 		@Parameter(type = ItemIO.OUTPUT)
 		ImgPlus<RealType<?>> outImgP;
-
+		
 		@Override
 		public void run() {
-			// faire le plugin ici 
+			
 		}
 
 	}
