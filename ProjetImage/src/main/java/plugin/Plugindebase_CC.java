@@ -22,6 +22,9 @@ public class Plugindebase_CC<T extends RealType<T>> implements Command {
 	@Parameter(type = ItemIO.OUTPUT)
 	ImgPlus<UnsignedByteType> imageConv;
 
+	@Parameter
+	int nocc;
+	
 	@Override
 	public void run() {
 
@@ -48,9 +51,19 @@ public class Plugindebase_CC<T extends RealType<T>> implements Command {
 		 * for (int y = 0; y < dimensions[1]; y++) for (int x = 0; x < dimensions[0];
 		 * x++) { getCC(x, y, cursorSeuil, cursorCC, dimensions); }
 		 */
-
-		getCC(0, 0, 1, cursorSeuil, cursorCC, dimensions);
-
+		
+		
+		int i=0;
+		for(long y=0;y<dimensions[1];y++)
+			for(long x=0;x<dimensions[0];x++) {
+				cursorCC.setPosition(new long[] {x,y,0});
+				if(cursorCC.get().getRealFloat()==0) {
+					i++;
+					getCC(x, y, i, cursorSeuil, cursorCC, dimensions);
+				}
+			}
+		System.out.println("nbcc="+i);
+		
 		// affichage
 		for (int y = 0; y < dimensions[1]; y++)
 			for (int x = 0; x < dimensions[0]; x++) {
@@ -59,7 +72,7 @@ public class Plugindebase_CC<T extends RealType<T>> implements Command {
 				position[1] = y;
 				cursorCC.setPosition(position);
 				cursorOut.setPosition(position);
-				if (cursorCC.get().get() == 1)
+				if (cursorCC.get().getRealFloat() == nocc)
 					cursorOut.get().set(0);
 				else {
 					cursorOut.get().set(255);
@@ -127,7 +140,7 @@ public class Plugindebase_CC<T extends RealType<T>> implements Command {
 				}
 			}
 		}
-		System.out.println(stack.size());
+		//System.out.println(stack.size());
 		// endregion
 		while (!stack.isEmpty()) {
 			StackData data = stack.pop();
