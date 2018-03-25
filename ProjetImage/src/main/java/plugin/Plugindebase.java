@@ -1,7 +1,12 @@
 package plugin;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Stack;
 
+import org.python.antlr.PythonParser.return_stmt_return;
+import org.renjin.gnur.Sort;
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
 import org.scijava.convert.ConvertService;
@@ -54,17 +59,31 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		ImgPlus<UnsignedByteType> imageCC = ImgPlus.wrap(ArrayImgs.unsignedBytes(dimensions));
 		RandomAccess<UnsignedByteType> cursorCC = imageCC.randomAccess();
 
-		int i = 0;
+		int nbCC = 0;
 		for (long y = 0; y < dimensions[1]; y++)
 			for (long x = 0; x < dimensions[0]; x++) {
 				cursorCC.setPosition(new long[] { x, y, 0 });
 				if (cursorCC.get().getRealFloat() == 0) {
-					i++;
-					getCC(x, y, i, cursorSeuil, cursorCC, dimensions);
+					nbCC++;
+					getCC(x, y, nbCC, cursorSeuil, cursorCC, dimensions);
 				}
 			}
-		System.out.println("nbcc=" + i);
+		System.out.println("nbcc=" + nbCC);
 
+		int[][] count = count(cursorCC, nbCC, dimensions);
+		Arrays.sort(count, new Comparator<int[]>() {
+
+			@Override
+			public int compare(int[] o1, int[] o2) {
+				if (o1[1] < o2[1])
+					return 1;
+				if (o1[1] > o2[1])
+					return -1;
+				if (o1[1] == o2[1])
+					return 0;
+				return 0;
+			}
+		});
 		// affichage
 		for (int y = 0; y < dimensions[1]; y++)
 			for (int x = 0; x < dimensions[0]; x++) {
@@ -73,7 +92,7 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 				position[1] = y;
 				cursorCC.setPosition(position);
 				cursorOut.setPosition(position);
-				if (cursorCC.get().getRealFloat() == nocc)
+				if (cursorCC.get().getRealFloat() == count[nocc][0])
 					cursorOut.get().set(0);
 				else {
 					cursorOut.get().set(255);
@@ -167,5 +186,17 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 				}
 			}
 		}
+	}
+	private int[][] count(RandomAccess<UnsignedByteType> cursorIn, int lenght,long[] dimensions) {
+		int[][] out=new int[lenght+1][2];
+		for(int i=0;i<out.length;i++)
+			out[i][1]=i;
+		
+		for(long y=0;y<dimensions[1];y++)
+			for(long x=0;x<dimensions[0];x++) {
+				cursorIn.setPosition(new long[] {x,y,0});
+				out[(int)(cursorIn.get().getRealFloat())][0]++;
+			}
+		return out;
 	}
 }
