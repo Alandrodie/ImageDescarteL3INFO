@@ -1,12 +1,8 @@
 package plugin;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Stack;
 
-import org.python.antlr.PythonParser.return_stmt_return;
-import org.renjin.gnur.Sort;
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
 import org.scijava.convert.ConvertService;
@@ -48,9 +44,8 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		imageConv = ImgPlus.wrap(ArrayImgs.unsignedBytes(dimensions));
 		imageConv.setName(img.getName() + "_Mask");
 
+		// processing chain
 		ImgPlus<UnsignedByteType> noirEtBlanc = convertirNoiretBlanc(colorImage);
-
-		// Two random cursor to visit all pixels in the input and output images.
 		RandomAccess<UnsignedByteType> cursorIn = noirEtBlanc.randomAccess();
 		ImgPlus<UnsignedByteType> imageSeuillée = ImgPlus.wrap(ArrayImgs.unsignedBytes(dimensions));
 		RandomAccess<UnsignedByteType> cursorSeuil = imageSeuillée.randomAccess();
@@ -58,7 +53,6 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		RandomAccess<UnsignedByteType> cursorOut = imageConv.randomAccess();
 		ImgPlus<UnsignedByteType> imageCC = ImgPlus.wrap(ArrayImgs.unsignedBytes(dimensions));
 		RandomAccess<UnsignedByteType> cursorCC = imageCC.randomAccess();
-
 		int nbCC = 0;
 		for (long y = 0; y < dimensions[1]; y++)
 			for (long x = 0; x < dimensions[0]; x++) {
@@ -69,30 +63,19 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 				}
 			}
 		System.out.println("nbcc=" + nbCC);
-
-		int[][] count = count(cursorCC, nbCC, dimensions);
-		Arrays.sort(count, new Comparator<int[]>() {
-
-			@Override
-			public int compare(int[] o1, int[] o2) {
-				if (o1[1] < o2[1])
-					return 1;
-				if (o1[1] > o2[1])
-					return -1;
-				if (o1[1] == o2[1])
-					return 0;
-				return 0;
-			}
-		});
+		int[] count = count(cursorCC, nbCC, dimensions);
+		System.out.println("taille CC=" + count[nocc]);
+		HashSet<Couple<Integer>> neighbors_map = areNeighbors(cursorCC, dimensions);
+		System.out.println(neighbors_map.size());
 		// affichage
-		for (int y = 0; y < dimensions[1]; y++)
-			for (int x = 0; x < dimensions[0]; x++) {
+		for (long y = 0; y < dimensions[1]; y++)
+			for (long x = 0; x < dimensions[0]; x++) {
 				long[] position = new long[3];
 				position[0] = x;
 				position[1] = y;
 				cursorCC.setPosition(position);
 				cursorOut.setPosition(position);
-				if (cursorCC.get().getRealFloat() == count[nocc][0])
+				if (cursorCC.get().getRealFloat() == nocc)
 					cursorOut.get().set(0);
 				else {
 					cursorOut.get().set(255);
@@ -107,11 +90,12 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		return new ImgPlus<UnsignedByteType>(ImagePlusAdapter.wrapByte(colorImagePlus), dataset.getName() + "_gray");
 	}
 
-	private void appliquerSeuillage(int seuil, RandomAccess<UnsignedByteType> cursorIn,RandomAccess<UnsignedByteType> cursorOut, long[] dimensions) {
+	private void appliquerSeuillage(int seuil, RandomAccess<UnsignedByteType> cursorIn,
+			RandomAccess<UnsignedByteType> cursorOut, long[] dimensions) {
 		long[] position = new long[3];
-		for (int i = 0; i < dimensions[0]; i++) {
+		for (long i = 0; i < dimensions[0]; i++) {
 			position[0] = i;
-			for (int j = 0; j < dimensions[1]; j++) {
+			for (long j = 0; j < dimensions[1]; j++) {
 				position[1] = j;
 				cursorIn.setPosition(position);
 				cursorOut.setPosition(position);
@@ -119,7 +103,7 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 					cursorOut.get().set(0);
 				else
 					cursorOut.get().set(255);
-	
+
 			}
 		}
 	}
@@ -129,12 +113,16 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 	}
 
 	private long[][] closeNeighbors(long x, long y) {
-		long[][] out = new long[4][2];
-		// order is top,right,bottom,left
+		long[][] out = new long[8][2];
+		// order is top,corner,right,corner,bottom,corner,left,corner
 		out[0] = new long[] { x, y - 1 };
-		out[1] = new long[] { x + 1, y };
-		out[2] = new long[] { x, y + 1 };
-		out[3] = new long[] { x - 1, y };
+		out[1] = new long[] { x + 1, y - 1 };
+		out[2] = new long[] { x + 1, y };
+		out[3] = new long[] { x + 1, y + 1 };
+		out[4] = new long[] { x, y + 1 };
+		out[5] = new long[] { x - 1, y + 1 };
+		out[6] = new long[] { x - 1, y };
+		out[7] = new long[] { x - 1, y - 1 };
 		return out;
 	}
 
@@ -166,7 +154,6 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 				}
 			}
 		}
-		// System.out.println(stack.size());
 		// endregion
 		while (!stack.isEmpty()) {
 			StackData data = stack.pop();
@@ -187,15 +174,34 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 			}
 		}
 	}
-	private int[][] count(RandomAccess<UnsignedByteType> cursorIn, int lenght,long[] dimensions) {
-		int[][] out=new int[lenght+1][2];
-		for(int i=0;i<out.length;i++)
-			out[i][1]=i;
-		
-		for(long y=0;y<dimensions[1];y++)
-			for(long x=0;x<dimensions[0];x++) {
-				cursorIn.setPosition(new long[] {x,y,0});
-				out[(int)(cursorIn.get().getRealFloat())][0]++;
+
+	private int[] count(RandomAccess<UnsignedByteType> cursorIn, int lenght, long[] dimensions) {
+		int[] out = new int[lenght + 1];
+		for (long y = 0; y < dimensions[1]; y++)
+			for (long x = 0; x < dimensions[0]; x++) {
+				cursorIn.setPosition(new long[] { x, y, 0 });
+				out[(int) (cursorIn.get().getRealFloat())]++;
+			}
+		return out;
+	}
+
+	private HashSet<Couple<Integer>> areNeighbors(RandomAccess<UnsignedByteType> cursorIn, long[] dimensions) {
+		HashSet<Couple<Integer>> out = new HashSet<>();
+		RandomAccess<UnsignedByteType> cursorIn2 = cursorIn.copyRandomAccess();
+		for (long y = 0; y < dimensions[1]; y++)
+			for (long x = 0; x < dimensions[0]; x++) {
+				cursorIn.setPosition(new long[] { x, y, 0 });
+				for (long[] pos : closeNeighbors(x, y)) {
+					long nx = pos[0];
+					long ny = pos[1];
+					if (isInBounds(dimensions, nx, ny)) {
+						cursorIn2.setPosition(new long[] { nx, ny, 0 });
+						if (cursorIn.get().getRealFloat() != cursorIn2.get().getRealFloat()) {
+							out.add(new Couple<Integer>(new Integer((int) cursorIn.get().getRealFloat()),
+									new Integer((int) cursorIn2.get().getRealFloat())));
+						}
+					}
+				}
 			}
 		return out;
 	}
