@@ -23,8 +23,7 @@ public class Couple<T> {
 			return false;
 		}
 		Couple<?> t = (Couple<?>) o;
-		if ((this.getA().equals(t.getA()) && this.getB().equals(t.getB()))
-				|| (this.getA().equals(t.getB()) && this.getB().equals(t.getA())))
+		if (this.getA().equals(t.getA()) && this.getB().equals(t.getB()))
 			return true;
 		else
 			return false;

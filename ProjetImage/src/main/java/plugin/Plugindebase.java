@@ -66,7 +66,9 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		int[] count = count(cursorCC, nbCC, dimensions);
 		System.out.println("taille CC=" + count[nocc]);
 		HashSet<Couple<Integer>> neighbors_map = areNeighbors(cursorCC, dimensions);
-		System.out.println(neighbors_map.size());
+		System.out.println("neighbors map size=" + neighbors_map.size());
+		int[] neighbors_count = numNeighbors(neighbors_map, nbCC);
+		System.out.println("nombre de voisins = " + neighbors_count[nocc]);
 		// affichage
 		for (long y = 0; y < dimensions[1]; y++)
 			for (long x = 0; x < dimensions[0]; x++) {
@@ -203,6 +205,14 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 					}
 				}
 			}
+		return out;
+	}
+
+	private int[] numNeighbors(HashSet<Couple<Integer>> neighborsMap, int nbCC) {
+		int[] out = new int[nbCC + 1];
+		for (Couple<Integer> c : neighborsMap) {
+			out[c.getA()]++;
+		}
 		return out;
 	}
 }
