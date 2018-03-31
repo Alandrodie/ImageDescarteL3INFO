@@ -1,6 +1,8 @@
 package plugin;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Stack;
 
 import org.scijava.ItemIO;
@@ -53,13 +55,17 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		RandomAccess<UnsignedByteType> cursorOut = imageConv.randomAccess();
 		ImgPlus<UnsignedByteType> imageCC = ImgPlus.wrap(ArrayImgs.unsignedBytes(dimensions));
 		RandomAccess<UnsignedByteType> cursorCC = imageCC.randomAccess();
+
+		ArrayList<LinkedList<Couple<Long>>> CCList = new ArrayList<>();
+		CCList.add(null);
 		int nbCC = 0;
 		for (long y = 0; y < dimensions[1]; y++)
 			for (long x = 0; x < dimensions[0]; x++) {
 				cursorCC.setPosition(new long[] { x, y, 0 });
 				if (cursorCC.get().getRealFloat() == 0) {
 					nbCC++;
-					getCC(x, y, nbCC, cursorSeuil, cursorCC, dimensions);
+					CCList.add(new LinkedList<>());
+					getCC(x, y, nbCC, cursorSeuil, cursorCC, dimensions, CCList);
 				}
 			}
 		System.out.println("nbcc=" + nbCC);
@@ -129,7 +135,7 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 	}
 
 	private void getCC(long x, long y, int nbCC, RandomAccess<UnsignedByteType> cursorIn,
-			RandomAccess<UnsignedByteType> cursorOut, long[] dimensions) {
+			RandomAccess<UnsignedByteType> cursorOut, long[] dimensions, ArrayList<LinkedList<Couple<Long>>> CCList) {
 		class StackData {
 			long x;
 			long y;
@@ -151,6 +157,7 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 					cursorIn2.setPosition(new long[] { pos[0], pos[1], 0 });
 					if (cursorIn.get().getRealFloat() == cursorIn2.get().getRealFloat()) {
 						cursorOut.get().set(nbCC);
+						CCList.get(nbCC).add(new Couple<Long>(pos[0], pos[1]));
 						stack.push(new StackData(pos[0], pos[1]));
 					}
 				}
@@ -168,6 +175,7 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 							cursorIn2.setPosition(new long[] { pos[0], pos[1], 0 });
 							if (cursorIn.get().getRealFloat() == cursorIn2.get().getRealFloat()) {
 								cursorOut.get().set(nbCC);
+								CCList.get(nbCC).add(new Couple<Long>(pos[0], pos[1]));
 								stack.push(new StackData(pos[0], pos[1]));
 							}
 						}
