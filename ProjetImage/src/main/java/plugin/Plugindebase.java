@@ -94,6 +94,19 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		// cursorOut.setPosition(new long[] { c.getX(), c.getY(), 0 });
 		// cursorOut.get().set(255);
 		// }
+		// affichage3
+		for (LinkedList<CCData> list : CCList)
+			if (list != null)
+				for (CCData data : list) {
+					if (neighbors_count[data.getNoCC()] == 2 && data.getColor() == color.black) {
+						cursorOut.setPosition(new long[] { data.getX(), data.getY(), 0 });
+						cursorOut.get().set(255);
+					} else {
+						cursorOut.setPosition(new long[] { data.getX(), data.getY(), 0 });
+						cursorOut.get().set(0);
+					}
+				}
+
 	}
 
 	private ImgPlus<UnsignedByteType> convertirNoiretBlanc(Dataset dataset) {
