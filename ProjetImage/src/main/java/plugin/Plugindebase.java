@@ -1,9 +1,7 @@
 package plugin;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Stack;
 
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
@@ -20,7 +18,6 @@ import net.imglib2.img.ImagePlusAdapter;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
-import plugin.CCData.color;
 
 @Plugin(type = Command.class, menuPath = "Plugins>Projet > PlugindeBase (Not normalized)")
 public class Plugindebase<T extends RealType<T>> implements Command {
@@ -36,7 +33,7 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 	ImgPlus<UnsignedByteType> imageConv;
 
 	@Parameter
-	int nocc;
+	int nbNeighbors;
 
 	@Override
 	public void run() {
@@ -57,56 +54,25 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		ImgPlus<UnsignedByteType> imageCC = ImgPlus.wrap(ArrayImgs.unsignedBytes(dimensions));
 		RandomAccess<UnsignedByteType> cursorCC = imageCC.randomAccess();
 
-		ArrayList<LinkedList<CCData>> CCList = new ArrayList<>();
-		CCList.add(null);
-		int nbCC = 0;
-		for (long y = 0; y < dimensions[1]; y++)
-			for (long x = 0; x < dimensions[0]; x++) {
-				cursorCC.setPosition(new long[] { x, y, 0 });
-				if (cursorCC.get().getRealFloat() == 0) {
-					nbCC++;
-					CCList.add(new LinkedList<>());
-					getCC(x, y, nbCC, cursorSeuil, cursorCC, dimensions, CCList);
-				}
-			}
-		System.out.println("nbcc=" + nbCC);
-		int[] count = count(cursorCC, nbCC, dimensions);
-		System.out.println("taille CC=" + count[nocc]);
-		HashSet<Couple<Integer>> neighbors_map = areNeighbors(cursorCC, dimensions);
-		int[] neighbors_count = numNeighbors(neighbors_map, nbCC);
-		System.out.println("nombre de voisins = " + neighbors_count[nocc]);
+		ArrayList<LinkedList<CCData>> CCList = ConnectedCoponents.getAllCC(cursorSeuil, cursorCC, dimensions);
+		System.out.println(CCList.size());
+
+		int[] neighboring = Neighbors.getNumNeighbors(cursorCC, dimensions, CCList.size());
+
 		// affichage
-		// for (long y = 0; y < dimensions[1]; y++)
-		// for (long x = 0; x < dimensions[0]; x++) {
-		// long[] position = new long[3];
-		// position[0] = x;
-		// position[1] = y;
-		// cursorCC.setPosition(position);
-		// cursorOut.setPosition(position);
-		// if (cursorCC.get().getRealFloat() == nocc)
-		// cursorOut.get().set(0);
-		// else {
-		// cursorOut.get().set(255);
-		// }
-		// }
-		// affichage2
-		// for (CCData c : CCList.get(nocc)) {
-		// cursorOut.setPosition(new long[] { c.getX(), c.getY(), 0 });
-		// cursorOut.get().set(255);
-		// }
-		// affichage3
-		for (LinkedList<CCData> list : CCList)
-			if (list != null)
-				for (CCData data : list) {
-					if (neighbors_count[data.getNoCC()] == 2 && data.getColor() == color.black) {
-						cursorOut.setPosition(new long[] { data.getX(), data.getY(), 0 });
+		int i = 0;
+		for (LinkedList<CCData> l : CCList) {
+			if (l != null) {
+				i++;
+				if (neighboring[l.getFirst().getNoCC()] == nbNeighbors
+						&& l.getFirst().getColor() == CCData.color.black) {
+					for (CCData c : l) {
+						cursorOut.setPosition(new long[] { c.getX(), c.getY(), 0 });
 						cursorOut.get().set(255);
-					} else {
-						cursorOut.setPosition(new long[] { data.getX(), data.getY(), 0 });
-						cursorOut.get().set(0);
 					}
 				}
-
+			}
+		}
 	}
 
 	private ImgPlus<UnsignedByteType> convertirNoiretBlanc(Dataset dataset) {
@@ -134,81 +100,6 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		}
 	}
 
-	private boolean isInBounds(long[] dimensions, long x, long y) {
-		return 0 <= x && x < dimensions[0] && 0 <= y && y < dimensions[1];
-	}
-
-	private long[][] closeNeighbors(long x, long y) {
-		long[][] out = new long[8][2];
-		// order is top,corner,right,corner,bottom,corner,left,corner
-		out[0] = new long[] { x, y - 1 };
-		out[1] = new long[] { x + 1, y - 1 };
-		out[2] = new long[] { x + 1, y };
-		out[3] = new long[] { x + 1, y + 1 };
-		out[4] = new long[] { x, y + 1 };
-		out[5] = new long[] { x - 1, y + 1 };
-		out[6] = new long[] { x - 1, y };
-		out[7] = new long[] { x - 1, y - 1 };
-		return out;
-	}
-
-	private void getCC(long x, long y, int nbCC, RandomAccess<UnsignedByteType> cursorIn,
-			RandomAccess<UnsignedByteType> cursorOut, long[] dimensions, ArrayList<LinkedList<CCData>> CCList) {
-		class StackData {
-			long x;
-			long y;
-
-			public StackData(long x, long y) {
-				this.x = x;
-				this.y = y;
-			}
-
-		}
-		Stack<StackData> stack = new Stack<>();
-		RandomAccess<UnsignedByteType> cursorIn2 = cursorIn.copyRandomAccess();
-		// region first loop
-		cursorIn.setPosition(new long[] { x, y, 0 });
-		cursorOut.setPosition(new long[] { x, y, 0 });
-		if (cursorOut.get().getRealFloat() == 0) {
-			for (long[] pos : closeNeighbors(x, y)) {
-				if (isInBounds(dimensions, pos[0], pos[1])) {
-					cursorIn2.setPosition(new long[] { pos[0], pos[1], 0 });
-					if (cursorIn.get().getRealFloat() == cursorIn2.get().getRealFloat()) {
-						cursorOut.get().set(nbCC);
-						float colorf = cursorIn.get().getRealFloat();
-						color colorc = colorf == 0 ? color.black : color.white;
-						CCData ccdata = new CCData(pos[0], pos[1], colorc, nbCC);
-						CCList.get(nbCC).add(ccdata);
-						stack.push(new StackData(pos[0], pos[1]));
-					}
-				}
-			}
-		}
-		// endregion
-		while (!stack.isEmpty()) {
-			StackData data = stack.pop();
-			if (isInBounds(dimensions, data.x, data.y)) {
-				cursorIn.setPosition(new long[] { data.x, data.y, 0 });
-				cursorOut.setPosition(new long[] { data.x, data.y, 0 });
-				if (cursorOut.get().getRealFloat() == 0) {
-					for (long[] pos : closeNeighbors(data.x, data.y)) {
-						if (isInBounds(dimensions, pos[0], pos[1])) {
-							cursorIn2.setPosition(new long[] { pos[0], pos[1], 0 });
-							if (cursorIn.get().getRealFloat() == cursorIn2.get().getRealFloat()) {
-								cursorOut.get().set(nbCC);
-								float colorf = cursorIn.get().getRealFloat();
-								color colorc = colorf == 0 ? color.black : color.white;
-								CCData ccdata = new CCData(pos[0], pos[1], colorc, nbCC);
-								CCList.get(nbCC).add(ccdata);
-								stack.push(new StackData(pos[0], pos[1]));
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
 	private int[] count(RandomAccess<UnsignedByteType> cursorIn, int lenght, long[] dimensions) {
 		int[] out = new int[lenght + 1];
 		for (long y = 0; y < dimensions[1]; y++)
@@ -219,32 +110,4 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		return out;
 	}
 
-	private HashSet<Couple<Integer>> areNeighbors(RandomAccess<UnsignedByteType> cursorIn, long[] dimensions) {
-		HashSet<Couple<Integer>> out = new HashSet<>();
-		RandomAccess<UnsignedByteType> cursorIn2 = cursorIn.copyRandomAccess();
-		for (long y = 0; y < dimensions[1]; y++)
-			for (long x = 0; x < dimensions[0]; x++) {
-				cursorIn.setPosition(new long[] { x, y, 0 });
-				for (long[] pos : closeNeighbors(x, y)) {
-					long nx = pos[0];
-					long ny = pos[1];
-					if (isInBounds(dimensions, nx, ny)) {
-						cursorIn2.setPosition(new long[] { nx, ny, 0 });
-						if (cursorIn.get().getRealFloat() != cursorIn2.get().getRealFloat()) {
-							out.add(new Couple<Integer>(new Integer((int) cursorIn.get().getRealFloat()),
-									new Integer((int) cursorIn2.get().getRealFloat())));
-						}
-					}
-				}
-			}
-		return out;
-	}
-
-	private int[] numNeighbors(HashSet<Couple<Integer>> neighborsMap, int nbCC) {
-		int[] out = new int[nbCC + 1];
-		for (Couple<Integer> c : neighborsMap) {
-			out[c.getA()]++;
-		}
-		return out;
-	}
 }
