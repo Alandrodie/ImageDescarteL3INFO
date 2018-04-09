@@ -5,7 +5,7 @@ public class CCData {
 	private long y;
 
 	public static enum color {
-		black, white
+		black , white
 	};
 
 	private color color;
