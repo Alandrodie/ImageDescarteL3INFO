@@ -2,7 +2,6 @@ package plugin;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.NoSuchElementException;
 
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
@@ -56,23 +55,19 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		RandomAccess<UnsignedByteType> cursorCC = imageCC.randomAccess();
 
 		ArrayList<LinkedList<CCData>> CCList = ConnectedCoponents.getAllCC(cursorSeuil, cursorCC, dimensions);
-		System.out.println("nbCC = " + CCList.size());
+		System.out.println("nbCC = "+CCList.size());
 
 		int[] neighboring = Neighbors.getNumNeighbors(cursorCC, dimensions, CCList.size());
 
 		// affichage
 		for (LinkedList<CCData> l : CCList) {
-			if (l != null) {
-				try {
-					if (neighboring[l.getFirst().getNoCC()] == nbNeighbors
-							&& l.getFirst().getColor() == CCData.color.black) {
-						for (CCData c : l) {
-							cursorOut.setPosition(new long[] { c.getX(), c.getY(), 0 });
-							cursorOut.get().set(255);
-						}
+			if (l != null && !l.isEmpty()) {
+				if (neighboring[l.getFirst().getNoCC()] == nbNeighbors
+						&& l.getFirst().getColor() == CCData.color.black) {
+					for (CCData c : l) {
+						cursorOut.setPosition(new long[] { c.getX(), c.getY(), 0 });
+						cursorOut.get().set(255);
 					}
-				} catch (NoSuchElementException e) {
-					// don't know why this happend
 				}
 			}
 		}
@@ -82,7 +77,7 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		ImagePlus colorImagePlus = cs.convert(dataset, ImagePlus.class);
 		ImageConverter converter = new ImageConverter(colorImagePlus);
 		converter.convertToGray8();
-		return new ImgPlus<>(ImagePlusAdapter.wrapByte(colorImagePlus), dataset.getName() + "_gray");
+		return new ImgPlus<UnsignedByteType>(ImagePlusAdapter.wrapByte(colorImagePlus), dataset.getName() + "_gray");
 	}
 
 	private void appliquerSeuillage(int seuil, RandomAccess<UnsignedByteType> cursorIn,
