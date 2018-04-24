@@ -31,7 +31,7 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 	private OpService ops;
 
 	@Parameter(persist = false)
-	ImagePlus imgBase;
+	ImgPlus img;
 	@Parameter
 	Dataset colorImage;
 
@@ -44,7 +44,8 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 	@Override
 	public void run() {
 
-		ImgPlus<UnsignedByteType> img = (ImgPlus<UnsignedByteType>) ops.run("squelette", colorImage);
+		// ImgPlus<UnsignedByteType> img = (ImgPlus<UnsignedByteType>)
+		// ops.run("squelette", colorImage);
 
 		long[] dimensions = new long[img.numDimensions()];
 		img.dimensions(dimensions);
@@ -87,18 +88,18 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		si.classify(CCList2, neighboring);
 
 		// affichage
-		// for (LinkedList<CCData> l : CCList2) {
-		// if (l != null && !l.isEmpty()) {
-		// if (neighboring[l.getFirst().getNoCC()] == nbNeighbors
-		// && l.getFirst().getColor() == CCData.Color.black) {
-		// for (CCData c : l) {
-		// cursorOut.setPosition(new long[] { c.getX(), c.getY(), 0 });
-		// cursorOut.get().set(255);
-		// }
-		// }
-		// }
-		// }
+		for (LinkedList<CCData> l : CCList2) {
+			if (l != null && !l.isEmpty()) {
+				if (neighboring[l.getFirst().getNoCC()] == 1 && l.getFirst().getColor() == CCData.Color.black) {
+					for (CCData c : l) {
+						cursorOut.setPosition(new long[] { c.getX(), c.getY(), 0 });
+						cursorOut.get().set(255);
+					}
+				}
+			}
+		}
 		List<List<CCData>> circles = si.getCircles();
+		System.out.println("nb cercles =" + si.getCircles().size());
 		long[][] centersCircles = new long[circles.size()][2];
 		int i = 0;
 		for (List<CCData> component : circles) {
@@ -114,6 +115,7 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		}
 		double[] angulierCrosses = CheckAlignment.angulier(centerCrosses);
 		Arrays.sort(angulierCrosses);
+		System.out.println("nb crosses = " + si.getCrosses().size());
 		System.out.println("min angle circles = " + angulierCircles[0]);
 		System.out.println("min angle crosses = " + angulierCrosses[0]);
 		if (angulierCircles[0] < maxAngle) {
