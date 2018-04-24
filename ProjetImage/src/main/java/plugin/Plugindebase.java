@@ -116,6 +116,9 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		double[] angulierCrosses = CheckAlignment.angulier(centerCrosses);
 		Arrays.sort(angulierCrosses);
 		System.out.println("nb crosses = " + si.getCrosses().size());
+
+		System.out.println("maxAngle =" + maxAngle);
+
 		System.out.println("min angle circles = " + angulierCircles[0]);
 		System.out.println("min angle crosses = " + angulierCrosses[0]);
 		if (angulierCircles[0] < maxAngle) {
