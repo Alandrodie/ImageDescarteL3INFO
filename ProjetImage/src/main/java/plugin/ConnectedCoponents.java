@@ -6,7 +6,7 @@ import java.util.Stack;
 
 import net.imglib2.RandomAccess;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
-import plugin.CCData.color;
+import plugin.CCData.Color;
 
 public class ConnectedCoponents {
 
@@ -51,7 +51,7 @@ public class ConnectedCoponents {
 					if (cursorIn.get().getRealFloat() == cursorIn2.get().getRealFloat()) {
 						cursorOut.get().set(nbCC);
 						float colorf = cursorIn.get().getRealFloat();
-						color colorc = colorf == 0 ? color.black : color.white;
+						Color colorc = colorf == 0 ? Color.black : Color.white;
 						CCData ccdata = new CCData(pos[0], pos[1], colorc, nbCC);
 						CCList.get(nbCC).add(ccdata);
 						stack.push(new StackData(pos[0], pos[1]));
@@ -72,7 +72,7 @@ public class ConnectedCoponents {
 							if (cursorIn.get().getRealFloat() == cursorIn2.get().getRealFloat()) {
 								cursorOut.get().set(nbCC);
 								float colorf = cursorIn.get().getRealFloat();
-								color colorc = colorf == 0 ? color.black : color.white;
+								Color colorc = colorf == 0 ? Color.black : Color.white;
 								CCData ccdata = new CCData(pos[0], pos[1], colorc, nbCC);
 								CCList.get(nbCC).add(ccdata);
 								stack.push(new StackData(pos[0], pos[1]));

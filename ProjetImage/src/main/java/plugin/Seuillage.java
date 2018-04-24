@@ -7,21 +7,20 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import net.imagej.Dataset;
 import net.imagej.ImgPlus;
+import net.imagej.ops.AbstractOp;
+import net.imagej.ops.Op;
 import net.imglib2.RandomAccess;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 
-@Plugin(type = Command.class, menuPath = "Plugins>TD 8>Seuillage")
-public class Seuillage implements Command {
+@Plugin(type = Op.class, name = "seuillage")
+public class Seuillage extends AbstractOp {
 
-	@Parameter
-	ConvertService conv;
 	@Parameter(persist = false)
 	ImgPlus<UnsignedByteType> img;
-	@Parameter
-	Dataset inputImage;
+
 	@Parameter(required = false)
-	int seuil = 127;
+	int seuil;
 	
 	@Parameter(type = ItemIO.OUTPUT)
 	ImgPlus<UnsignedByteType> output;

@@ -12,11 +12,13 @@ import ij.process.ByteProcessor;
 import ij.process.ImageConverter;
 import net.imagej.Dataset;
 import net.imagej.ImgPlus;
+import net.imagej.ops.AbstractOp;
+import net.imagej.ops.Op;
 import net.imglib2.img.ImagePlusAdapter;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 
-@Plugin(type = Command.class, menuPath = "Plugins>TD 8>Skeleton")
-public class Squelette implements Command {
+@Plugin(type = Op.class, name = "squelette")
+public class Squelette extends AbstractOp {
 
 	@Parameter
 	ConvertService conv;
@@ -32,7 +34,7 @@ public class Squelette implements Command {
 		ImagePlus imp = convertInputToImagePlus();
 		output = skeletonize(imp);
 	}
-
+	
 	private ImagePlus convertInputToImagePlus() {
 		ImagePlus imp = conv.convert(inputImage, ImagePlus.class);
 		ImageConverter c = new ImageConverter(imp);
@@ -45,6 +47,7 @@ public class Squelette implements Command {
 		ByteProcessor pr = (ByteProcessor) imp.getProcessor().convertToByte(true);
 		BinaryProcessor binPr = new BinaryProcessor(pr);
 		binPr.skeletonize();
+		binPr.dilate();
 		
 		return new ImgPlus<UnsignedByteType>(ImagePlusAdapter.wrapByte(imp), "Skeleton");
 	}

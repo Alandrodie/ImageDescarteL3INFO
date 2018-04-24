@@ -13,9 +13,12 @@ import ij.ImagePlus;
 import ij.process.ImageConverter;
 import net.imagej.Dataset;
 import net.imagej.ImgPlus;
+import net.imagej.ops.OpService;
+import net.imagej.ops.Ops;
 import net.imglib2.RandomAccess;
 import net.imglib2.img.ImagePlusAdapter;
 import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 
@@ -24,8 +27,11 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 	@Parameter
 	ConvertService cs;
 
+	@Parameter
+	private OpService ops;
+	
 	@Parameter(persist = false)
-	ImgPlus<T> img;
+	ImagePlus imgBase;
 	@Parameter
 	Dataset colorImage;
 
@@ -38,6 +44,9 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 	@Override
 	public void run() {
 
+		ImgPlus<UnsignedByteType> img =   (ImgPlus<UnsignedByteType>) ops.run("squelette",colorImage);
+		
+		
 		long[] dimensions = new long[img.numDimensions()];
 		img.dimensions(dimensions);
 		// Creation of the resulting image with the same size as the input image.
@@ -45,11 +54,16 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		imageConv.setName(img.getName() + "_Mask");
 
 		// processing chain
-		ImgPlus<UnsignedByteType> noirEtBlanc = convertirNoiretBlanc(colorImage);
-		RandomAccess<UnsignedByteType> cursorIn = noirEtBlanc.randomAccess();
+		//ImgPlus<UnsignedByteType> noirEtBlanc = convertirNoiretBlanc(colorImage);
+		RandomAccess<UnsignedByteType> cursorIn = img.randomAccess();
+		
 		ImgPlus<UnsignedByteType> imageSeuillée = ImgPlus.wrap(ArrayImgs.unsignedBytes(dimensions));
+		
+		imageSeuillée =  (ImgPlus<UnsignedByteType>) ops.run("seuillage", img,220);
 		RandomAccess<UnsignedByteType> cursorSeuil = imageSeuillée.randomAccess();
-		appliquerSeuillage(220, cursorIn, cursorSeuil, dimensions);
+		//appliquerSeuillage(220, cursorIn, cursorSeuil, dimensions);
+		
+		
 		RandomAccess<UnsignedByteType> cursorOut = imageConv.randomAccess();
 		ImgPlus<UnsignedByteType> imageCC = ImgPlus.wrap(ArrayImgs.unsignedBytes(dimensions));
 		RandomAccess<UnsignedByteType> cursorCC = imageCC.randomAccess();
@@ -57,13 +71,24 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		ArrayList<LinkedList<CCData>> CCList = ConnectedCoponents.getAllCC(cursorSeuil, cursorCC, dimensions);
 		System.out.println("nbCC = "+CCList.size());
 
-		int[] neighboring = Neighbors.getNumNeighbors(cursorCC, dimensions, CCList.size());
+		
+		
+		ImgPlus<UnsignedByteType> imageClean = (ImgPlus<UnsignedByteType>) ops.run("cleanPlateau", imageCC, imageSeuillée);
+		//imageConv = (ImgPlus<UnsignedByteType>) ops.run("cleanPlateau", imageCC, imageSeuillée);
+		
+		RandomAccess<UnsignedByteType> cursorClean = imageClean.randomAccess();
 
+		ImgPlus<UnsignedByteType> imageCC2 = ImgPlus.wrap(ArrayImgs.unsignedBytes(dimensions));
+		RandomAccess<UnsignedByteType> cursorCC2 = imageCC2.randomAccess();
+		
+		ArrayList<LinkedList<CCData>> CCList2 = ConnectedCoponents.getAllCC(cursorClean, cursorCC2, dimensions);
+		System.out.println("nbCC = "+CCList2.size());
+		int[] neighboring = Neighbors.getNumNeighbors(cursorCC2, dimensions, CCList2.size());
 		// affichage
-		for (LinkedList<CCData> l : CCList) {
+		for (LinkedList<CCData> l : CCList2) {
 			if (l != null && !l.isEmpty()) {
 				if (neighboring[l.getFirst().getNoCC()] == nbNeighbors
-						&& l.getFirst().getColor() == CCData.color.black) {
+						&& l.getFirst().getColor() == CCData.Color.black) {
 					for (CCData c : l) {
 						cursorOut.setPosition(new long[] { c.getX(), c.getY(), 0 });
 						cursorOut.get().set(255);

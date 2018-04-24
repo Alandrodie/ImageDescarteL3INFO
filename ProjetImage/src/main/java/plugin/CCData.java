@@ -4,19 +4,30 @@ public class CCData {
 	private long x;
 	private long y;
 
-	public static enum color {
+	public static enum Color {
 		black , white
 	};
+	
+	
 
-	private color color;
+	private Color color;
 
 	private int noCC;
+	private long nbPixels;
+	
 
-	public CCData(long x, long y, plugin.CCData.color color, int noCC) {
+	public CCData(long x, long y, plugin.CCData.Color color, int noCC) {
 		this.x = x;
 		this.y = y;
 		this.color = color;
 		this.noCC = noCC;
+	}
+	
+	public CCData(int noCC, Color couleur) {
+		this.noCC = noCC;
+		
+		color = couleur;
+		nbPixels = 1;
 	}
 
 	public long getX() {
@@ -27,7 +38,7 @@ public class CCData {
 		return y;
 	}
 
-	public color getColor() {
+	public Color getColor() {
 		return color;
 	}
 
@@ -35,4 +46,11 @@ public class CCData {
 		return noCC;
 	}
 
+	public void addPixel() {
+		nbPixels++;
+	}
+	
+	public long getNbPixel() {
+		return nbPixels;
+	}
 }

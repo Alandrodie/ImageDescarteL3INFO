@@ -17,6 +17,7 @@ import net.imglib2.RandomAccess;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
+import plugin.CCData.Color;
 
 
 @Plugin(type = Op.class, name = "cleanPlateau")
@@ -41,7 +42,7 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 			imageConv = ImgPlus.wrap(ArrayImgs.unsignedBytes(dimensions));
 			imageConv.setName(img.getName() + "_Mask");
 		
-			ArrayList<ComposanteConnexe> composantesVisitees = new ArrayList<ComposanteConnexe>();
+			ArrayList<CCData> composantesVisitees = new ArrayList<CCData>();
 			
 			
 			long[] position = new long[imgCC.numDimensions()];
@@ -57,8 +58,8 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 					int currentCC =(int) cursorCC.get().getRealFloat();
 					// vérifie si c'est une ligne droite et que l'on connais la composante connexe
 					
-					ComposanteConnexe CC = null;
-					Optional<ComposanteConnexe> optionnalCC = composantesVisitees.stream().filter(x-> x.getNumeroCC() == currentCC).findFirst();
+					CCData CC = null;
+					Optional<CCData> optionnalCC = composantesVisitees.stream().filter(x-> x.getNoCC() == currentCC).findFirst();
 					if (optionnalCC.isPresent())
 						CC = optionnalCC.get();
 					
@@ -66,7 +67,7 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 					
 					if (CC == null) 
 					{
-						composantesVisitees.add(new ComposanteConnexe(currentCC, (int)cursorImg.get().getRealFloat()));
+						composantesVisitees.add(new CCData(currentCC,cursorImg.get().getRealFloat() == 0 ? Color.black : Color.white));
 						
 					} else  {
 						CC.addPixel();
@@ -75,7 +76,7 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 				
 				
 			}
-			int numGrille = composantesVisitees.stream().filter(x -> x.getCouleur() == 0).max((x1, x2) -> (int) (x1.getNbPixel() - x2.getNbPixel())).get().getNumeroCC();
+			int numGrille = composantesVisitees.stream().filter(x -> x.getColor() == Color.black).max((x1, x2) -> (int) (x1.getNbPixel() - x2.getNbPixel())).get().getNoCC();
 			
 			for (long i = 0; i < dimensions[0]; i++) {
 				position[0] = i;
@@ -86,12 +87,12 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 					int currentCC =(int) cursorCC.get().getRealFloat();
 					// vérifie si c'est une ligne droite et que l'on connais la composante connexe
 					
-					ComposanteConnexe CC = null;
+					CCData CC = null;
 					
-					Optional<ComposanteConnexe> optionnalCC = composantesVisitees.stream().filter(x-> x.getNumeroCC() == currentCC).findFirst();
+					Optional<CCData> optionnalCC = composantesVisitees.stream().filter(x-> x.getNoCC() == currentCC).findFirst();
 					if (optionnalCC.isPresent())
 						CC = optionnalCC.get();
-					if (currentCC == numGrille ||(CC != null && CC.getNbPixel() < 30)) {
+					if (currentCC == numGrille ||(CC != null && CC.getNbPixel() < 100)) {
 						
 						if( cursorImg.get().getRealFloat() == 255)
 						{
