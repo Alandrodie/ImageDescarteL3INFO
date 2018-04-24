@@ -10,6 +10,11 @@ import plugin.CCData.Color;
 
 public class ConnectedCoponents {
 
+	/*
+	 * the function returns a list of connected components. Each component is a list
+	 * of pixels. The CCData represent a pixel, with its coordinates, color and
+	 * number of pixels in the component.
+	 */
 	public static ArrayList<LinkedList<CCData>> getAllCC(RandomAccess<UnsignedByteType> cursorIn,
 			RandomAccess<UnsignedByteType> cursorOut, long[] dimensions) {
 		ArrayList<LinkedList<CCData>> CCList = new ArrayList<>();
