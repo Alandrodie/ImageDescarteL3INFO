@@ -1,5 +1,7 @@
 package plugin;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -30,8 +32,7 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 	@Parameter
 	private OpService ops;
 
-	@Parameter(persist = false)
-	ImgPlus img;
+	
 	@Parameter
 	Dataset colorImage;
 
@@ -40,13 +41,29 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 
 	@Parameter
 	double maxAngle;
+	
+	@Parameter
+	String outputDirectory;
+	
 
 	@Override
 	public void run() {
-
+		//initialisation fichier de sortie
+		
+		
+		ImgPlus<UnsignedByteType> img = (ImgPlus<UnsignedByteType>) ops.run("convertirNoirBlanc",colorImage);
+		
+		try {
+			FileWriter fw = new FileWriter(outputDirectory + "rapport.txt", true);
+		String nomImage = colorImage.getName();
+		
+		
+		
+		
+		
 		// ImgPlus<UnsignedByteType> img = (ImgPlus<UnsignedByteType>)
 		// ops.run("squelette", colorImage);
-
+		
 		long[] dimensions = new long[img.numDimensions()];
 		img.dimensions(dimensions);
 		// Creation of the resulting image with the same size as the input image.
@@ -87,46 +104,82 @@ public class Plugindebase<T extends RealType<T>> implements Command {
 		SymbolIdentifier si = new SymbolIdentifier();
 		si.classify(CCList2, neighboring);
 
-		// affichage
-		for (LinkedList<CCData> l : CCList2) {
-			if (l != null && !l.isEmpty()) {
-				if (neighboring[l.getFirst().getNoCC()] == 1 && l.getFirst().getColor() == CCData.Color.black) {
-					for (CCData c : l) {
-						cursorOut.setPosition(new long[] { c.getX(), c.getY(), 0 });
-						cursorOut.get().set(255);
+		int nbCircle = si.getCircles().size();
+		int nbCross = si.getCrosses().size();
+
+		//s'il y a trop de cercles ou de croix
+		
+		if (nbCircle + nbCross == 0) {
+			fw.write(nomImage + " : jeu impossible\n");
+		}
+		else if ((nbCircle > nbCross ) || (nbCross > nbCircle)) {
+			if (nbCircle + nbCross == 9)
+			{
+				fw.write(nomImage + " : jeu impossible\n");
+			}
+			else if ((nbCross  >  nbCircle +1) || (nbCross  >  nbCircle +2) ) {  
+				fw.write(nomImage + " : victoire des cercles\n");
+			}
+			else if ((nbCircle  >  nbCross +1) || (nbCircle  >  nbCross +2)) 
+			{
+				fw.write(nomImage + " : victore des croix\n");
+			}
+			else
+			{
+				fw.write(nomImage + " : jeu impossible\n");
+			}
+		} else {
+
+			// affichage
+			for (LinkedList<CCData> l : CCList2) {
+				if (l != null && !l.isEmpty()) {
+					if (neighboring[l.getFirst().getNoCC()] == 1 && l.getFirst().getColor() == CCData.Color.black) {
+						for (CCData c : l) {
+							cursorOut.setPosition(new long[] { c.getX(), c.getY(), 0 });
+							cursorOut.get().set(255);
+						}
 					}
 				}
 			}
-		}
-		List<List<CCData>> circles = si.getCircles();
-		System.out.println("nb cercles =" + si.getCircles().size());
-		long[][] centersCircles = new long[circles.size()][2];
-		int i = 0;
-		for (List<CCData> component : circles) {
-			centersCircles[i++] = Centers.computeCenter(component);
-		}
-		double[] angulierCircles = CheckAlignment.angulier(centersCircles);
-		Arrays.sort(angulierCircles);
-		List<List<CCData>> crosses = si.getCrosses();
-		long[][] centerCrosses = new long[crosses.size()][2];
-		i = 0;
-		for (List<CCData> component : crosses) {
-			centerCrosses[i++] = Centers.computeCenter(component);
-		}
-		double[] angulierCrosses = CheckAlignment.angulier(centerCrosses);
-		Arrays.sort(angulierCrosses);
-		System.out.println("nb crosses = " + si.getCrosses().size());
+			List<List<CCData>> circles = si.getCircles();
+			System.out.println("nb cercles =" + si.getCircles().size());
+			long[][] centersCircles = new long[circles.size()][2];
+			int i = 0;
+			for (List<CCData> component : circles) {
+				centersCircles[i++] = Centers.computeCenter(component);
+			}
+			double[] angulierCircles = CheckAlignment.angulier(centersCircles);
+			Arrays.sort(angulierCircles);
+			List<List<CCData>> crosses = si.getCrosses();
+			long[][] centerCrosses = new long[crosses.size()][2];
+			i = 0;
+			for (List<CCData> component : crosses) {
+				centerCrosses[i++] = Centers.computeCenter(component);
+			}
+			double[] angulierCrosses = CheckAlignment.angulier(centerCrosses);
+			Arrays.sort(angulierCrosses);
+			System.out.println("nb crosses = " + si.getCrosses().size());
 
-		System.out.println("maxAngle =" + maxAngle);
+			System.out.println("maxAngle =" + maxAngle);
 
-		System.out.println("min angle circles = " + angulierCircles[0]);
-		System.out.println("min angle crosses = " + angulierCrosses[0]);
-		if (angulierCircles[0] < maxAngle) {
-			System.out.println("Les cercles ont gagné !");
+			System.out.println("min angle circles = " + angulierCircles[0]);
+			System.out.println("min angle crosses = " + angulierCrosses[0]);
+			if (angulierCircles[0] < maxAngle) {
+				fw.write(nomImage + " : victoire des cercles\n");
+			}
+			else if (angulierCrosses[0] < maxAngle) {
+				fw.write(nomImage + " : victoire des croix\n");
+			}
+			else {
+				fw.write(nomImage + " : égalité\n");
+			}
 		}
-		if (angulierCrosses[0] < maxAngle) {
-			System.out.println("Les croix ont gangé !");
+		fw.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+
 	}
 
 	private ImgPlus<UnsignedByteType> convertirNoiretBlanc(Dataset dataset) {
